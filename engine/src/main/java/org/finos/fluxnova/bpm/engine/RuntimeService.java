@@ -1090,6 +1090,19 @@ public interface RuntimeService {
    */
   void signal(String executionId, Map<String, Object> processVariables);
 
+  /**
+   * Triggers an activity contained in an active ad-hoc subprocess execution.
+   *
+   * @param executionId the execution id of the active ad-hoc subprocess scope
+   * @param activityId the id of the inner activity to trigger
+   *
+   * @throws BadUserRequestException
+   *          when the executionId/activityId are null, the execution does not
+   *          exist, the execution is not an ad-hoc subprocess scope, or the
+   *          target activity is not startable inside the ad-hoc subprocess.
+   */
+  void triggerAdHocActivity(String executionId, String activityId);
+
   // Variables ////////////////////////////////////////////////////////////////////
 
   /**
