@@ -16,6 +16,10 @@
  */
 package org.finos.fluxnova.bpm.engine.rest.sub.runtime.impl;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import javax.ws.rs.core.Response.Status;
 
 import org.finos.fluxnova.bpm.engine.AuthorizationException;
@@ -25,6 +29,8 @@ import org.finos.fluxnova.bpm.engine.ProcessEngineException;
 import org.finos.fluxnova.bpm.engine.RuntimeService;
 import org.finos.fluxnova.bpm.engine.rest.dto.CreateIncidentDto;
 import org.finos.fluxnova.bpm.engine.rest.dto.VariableValueDto;
+import org.finos.fluxnova.bpm.engine.rest.dto.runtime.AdHocActivitiesTriggerDto;
+import org.finos.fluxnova.bpm.engine.rest.dto.runtime.AdHocActivityTriggerInstructionDto;
 import org.finos.fluxnova.bpm.engine.rest.dto.runtime.ExecutionDto;
 import org.finos.fluxnova.bpm.engine.rest.dto.runtime.ExecutionTriggerDto;
 import org.finos.fluxnova.bpm.engine.rest.dto.runtime.IncidentDto;
@@ -79,6 +85,44 @@ public class ExecutionResourceImpl implements ExecutionResource {
 
     } catch (ProcessEngineException e) {
       throw new RestException(Status.INTERNAL_SERVER_ERROR, e, "Cannot signal execution " + executionId + ": " + e.getMessage());
+
+    }
+  }
+
+  @Override
+  public void triggerAdHocActivities(AdHocActivitiesTriggerDto triggerDto) {
+    RuntimeService runtimeService = engine.getRuntimeService();
+    try {
+      Collection<String> activityIds = new ArrayList<>();
+      Map<String, Map<String, Object>> activityVariables = new LinkedHashMap<>();
+
+      if (triggerDto != null && triggerDto.getActivities() != null) {
+        for (AdHocActivityTriggerInstructionDto instruction : triggerDto.getActivities()) {
+          if (instruction == null) {
+            continue;
+          }
+
+          String activityId = instruction.getActivityId();
+          activityIds.add(activityId);
+
+          Map<String, VariableValueDto> variables = instruction.getVariables();
+          Map<String, Object> convertedVariables = VariableValueDto.toMap(variables, engine, objectMapper);
+          activityVariables.put(activityId, convertedVariables);
+        }
+      }
+
+      runtimeService.triggerAdHocActivities(executionId, activityIds, activityVariables);
+
+    } catch (RestException e) {
+      String errorMessage = String.format("Cannot trigger ad-hoc activities for execution %s: %s", executionId, e.getMessage());
+      throw new InvalidRequestException(e.getStatus(), e, errorMessage);
+
+    } catch (AuthorizationException e) {
+      throw e;
+
+    } catch (ProcessEngineException e) {
+      throw new RestException(Status.INTERNAL_SERVER_ERROR, e,
+          "Cannot trigger ad-hoc activities for execution " + executionId + ": " + e.getMessage());
 
     }
   }

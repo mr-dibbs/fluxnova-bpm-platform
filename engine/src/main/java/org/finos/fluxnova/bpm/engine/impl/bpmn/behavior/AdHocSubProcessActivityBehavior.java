@@ -25,7 +25,7 @@ import org.finos.fluxnova.bpm.engine.impl.pvm.process.ActivityImpl;
  * of Activities that can be performed in any order, and some of which may not
  * be performed at all. Initial activities are activated from the
  * {@code activeTasksCollection} extension property and additional starter activities may be
- * activated via {@code RuntimeService#triggerAdHocActivity(String, String)}.
+ * activated via {@code RuntimeService#triggerAdHocActivities(String, Collection, Map)}.
  *
  * <p>The subprocess completes when the {@code completionCondition} evaluates to
  * {@code true} after any inner activity completes, or when all running inner

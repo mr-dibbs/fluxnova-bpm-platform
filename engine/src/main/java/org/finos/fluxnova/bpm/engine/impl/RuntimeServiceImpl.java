@@ -45,7 +45,7 @@ import org.finos.fluxnova.bpm.engine.impl.cmd.ResolveIncidentCmd;
 import org.finos.fluxnova.bpm.engine.impl.cmd.SetAnnotationForIncidentCmd;
 import org.finos.fluxnova.bpm.engine.impl.cmd.SetExecutionVariablesCmd;
 import org.finos.fluxnova.bpm.engine.impl.cmd.SignalCmd;
-import org.finos.fluxnova.bpm.engine.impl.cmd.TriggerAdHocActivityCmd;
+import org.finos.fluxnova.bpm.engine.impl.cmd.TriggerAdHocActivitiesCmd;
 import org.finos.fluxnova.bpm.engine.impl.cmd.batch.DeleteProcessInstanceBatchCmd;
 import org.finos.fluxnova.bpm.engine.impl.cmd.batch.variables.SetVariablesToProcessInstancesBatchCmd;
 import org.finos.fluxnova.bpm.engine.impl.migration.MigrationPlanBuilderImpl;
@@ -545,8 +545,10 @@ public class RuntimeServiceImpl extends ServiceImpl implements RuntimeService {
   }
 
   @Override
-  public void triggerAdHocActivity(String executionId, String activityId) {
-    commandExecutor.execute(new TriggerAdHocActivityCmd(executionId, activityId));
+  public void triggerAdHocActivities(String executionId,
+                                     Collection<String> activityIds,
+                                     Map<String, Map<String, Object>> activityVariables) {
+    commandExecutor.execute(new TriggerAdHocActivitiesCmd(executionId, activityIds, activityVariables));
   }
 
   @Override

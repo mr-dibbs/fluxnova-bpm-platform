@@ -8,6 +8,8 @@ import static org.junit.Assert.fail;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -195,12 +197,86 @@ public class AdHocSubProcessTest extends PluggableProcessEngineTest {
                 .singleResult();
 
         try {
-            runtimeService.triggerAdHocActivity(adHocExecution.getId(), "doesNotExist");
+            runtimeService.triggerAdHocActivities(adHocExecution.getId(), Collections.singletonList("doesNotExist"), null);
             fail("Expected BadUserRequestException");
         } catch (BadUserRequestException e) {
             testRule.assertTextPresent("adHoc activity 'doesNotExist' does not exist in adHocSubProcess adHocSubProcess", e.getMessage());
         }
     }
+
+        @Deployment(resources = "org/finos/fluxnova/bpm/engine/test/bpmn/subprocess/AdHocSubProcessTest.testTriggerMultipleAdHocActivitiesWithActivityVariables.bpmn20.xml")
+        @Test
+        public void testTriggerMultipleAdHocActivitiesWithActivityVariables() {
+        ProcessInstance processInstance = runtimeService.startProcessInstanceByKey("adHocSubProcessWithThreeTasks");
+
+        Execution adHocExecution = runtimeService.createExecutionQuery()
+            .processInstanceId(processInstance.getId())
+            .activityId("adHocSubProcess")
+            .singleResult();
+
+        Map<String, Map<String, Object>> activityVariables = new LinkedHashMap<>();
+        Map<String, Object> taskBVariables = new HashMap<>();
+        taskBVariables.put("assigneeHint", "john");
+        Map<String, Object> taskCVariables = new HashMap<>();
+        taskCVariables.put("assigneeHint", "mary");
+        activityVariables.put("taskB", taskBVariables);
+        activityVariables.put("taskC", taskCVariables);
+
+        runtimeService.triggerAdHocActivities(adHocExecution.getId(), Arrays.asList("taskB", "taskC"), activityVariables);
+
+        Task taskB = taskService.createTaskQuery()
+            .processInstanceId(processInstance.getId())
+            .taskDefinitionKey("taskB")
+            .singleResult();
+
+        Task taskC = taskService.createTaskQuery()
+            .processInstanceId(processInstance.getId())
+            .taskDefinitionKey("taskC")
+            .singleResult();
+
+        Task taskA = taskService.createTaskQuery()
+            .processInstanceId(processInstance.getId())
+            .taskDefinitionKey("taskA")
+            .singleResult();
+
+        assertNotNull(taskA);
+        assertNotNull(taskB);
+        assertNotNull(taskC);
+
+        assertEquals("john", runtimeService.getVariableLocal(taskB.getExecutionId(), "assigneeHint"));
+        assertEquals("mary", runtimeService.getVariableLocal(taskC.getExecutionId(), "assigneeHint"));
+        assertNull(runtimeService.getVariableLocal(taskA.getExecutionId(), "assigneeHint"));
+        }
+
+        @Deployment(resources = "org/finos/fluxnova/bpm/engine/test/bpmn/subprocess/AdHocSubProcessTest.testTriggerMultipleAdHocActivitiesWithActivityVariables.bpmn20.xml")
+        @Test
+        public void testTriggerMultipleAdHocActivitiesFailsAllWhenOneIsInvalid() {
+        ProcessInstance processInstance = runtimeService.startProcessInstanceByKey("adHocSubProcessWithThreeTasks");
+
+        Execution adHocExecution = runtimeService.createExecutionQuery()
+            .processInstanceId(processInstance.getId())
+            .activityId("adHocSubProcess")
+            .singleResult();
+
+        try {
+            runtimeService.triggerAdHocActivities(adHocExecution.getId(), Arrays.asList("taskB", "doesNotExist"), null);
+            fail("Expected BadUserRequestException");
+        } catch (BadUserRequestException e) {
+            testRule.assertTextPresent("adHoc activity 'doesNotExist' does not exist", e.getMessage());
+        }
+
+        Task taskB = taskService.createTaskQuery()
+            .processInstanceId(processInstance.getId())
+            .taskDefinitionKey("taskB")
+            .singleResult();
+        Task taskC = taskService.createTaskQuery()
+            .processInstanceId(processInstance.getId())
+            .taskDefinitionKey("taskC")
+            .singleResult();
+
+        assertNull(taskB);
+        assertNull(taskC);
+        }
 
     @Deployment(resources = "org/finos/fluxnova/bpm/engine/test/bpmn/subprocess/AdHocSubProcessTest.testTriggerAdHocActivityFailsForNonAdHocExecution.bpmn20.xml")
     @Test
@@ -213,7 +289,7 @@ public class AdHocSubProcessTest extends PluggableProcessEngineTest {
                 .singleResult();
 
         try {
-            runtimeService.triggerAdHocActivity(execution.getId(), "taskA");
+            runtimeService.triggerAdHocActivities(execution.getId(), Collections.singletonList("taskA"), null);
             fail("Expected BadUserRequestException");
         } catch (BadUserRequestException e) {
             testRule.assertTextPresent("is not waiting in an adHocSubProcess", e.getMessage());
@@ -231,7 +307,7 @@ public class AdHocSubProcessTest extends PluggableProcessEngineTest {
                 .singleResult();
 
         try {
-            runtimeService.triggerAdHocActivity(adHocExecution.getId(), "taskC");
+            runtimeService.triggerAdHocActivities(adHocExecution.getId(), Collections.singletonList("taskC"), null);
             fail("Expected BadUserRequestException");
         } catch (BadUserRequestException e) {
             testRule.assertTextPresent("adHoc activity 'taskC' is not startable in adHocSubProcess adHocSubProcess", e.getMessage());
