@@ -90,17 +90,87 @@ public class AdHocSubProcessTest extends PluggableProcessEngineTest {
     assertNotNull(taskAfter);
   }
 
-    @Deployment
+  @Deployment(resources = "org/finos/fluxnova/bpm/engine/test/bpmn/subprocess/AdHocSubProcessTest.testMissingActiveTasksCollectionFailsAdHocStart.bpmn20.xml")
   @Test
-    public void testMissingActiveTasksCollectionFailsAdHocStart() {
-    try {
-      runtimeService.startProcessInstanceByKey("adHocSubProcessBasic");
-      fail("Expected BadUserRequestException");
-    } catch (BadUserRequestException e) {
-            testRule.assertTextPresent(
-                    "activeTasksCollection extension property must be provided for adHocSubProcess 'adHocSubProcess'",
-                    e.getMessage());
-    }
+  public void testMissingActiveTasksCollectionLeavesAdHocSubProcessActive() {
+    ProcessInstance processInstance = runtimeService.startProcessInstanceByKey("adHocSubProcessBasic");
+
+    assertEquals(0, taskService.createTaskQuery()
+        .processInstanceId(processInstance.getId())
+        .count());
+
+    Execution adHocExecution = runtimeService.createExecutionQuery()
+        .processInstanceId(processInstance.getId())
+        .activityId("adHocSubProcess")
+        .singleResult();
+
+    assertNotNull(adHocExecution);
+    assertNull(taskService.createTaskQuery()
+        .processInstanceId(processInstance.getId())
+        .taskDefinitionKey("taskAfter")
+        .singleResult());
+  }
+
+  @Deployment(resources = "org/finos/fluxnova/bpm/engine/test/bpmn/subprocess/AdHocSubProcessTest.testParallelActivationRespectsActiveTasksList.bpmn20.xml")
+  @Test
+  public void testEmptyActiveTasksCollectionLeavesAdHocSubProcessActive() {
+    ProcessInstance processInstance = runtimeService.startProcessInstanceByKey(
+        "adHocSubProcessBasic",
+        Collections.singletonMap("initialTaskIds", Collections.emptyList()));
+
+    assertEquals(0, taskService.createTaskQuery()
+        .processInstanceId(processInstance.getId())
+        .count());
+
+    Execution adHocExecution = runtimeService.createExecutionQuery()
+        .processInstanceId(processInstance.getId())
+        .activityId("adHocSubProcess")
+        .singleResult();
+
+    assertNotNull(adHocExecution);
+    assertNull(taskService.createTaskQuery()
+        .processInstanceId(processInstance.getId())
+        .taskDefinitionKey("taskAfter")
+        .singleResult());
+  }
+
+  @Deployment(resources = "org/finos/fluxnova/bpm/engine/test/bpmn/subprocess/AdHocSubProcessTest.testMissingActiveTasksCollectionFailsAdHocStart.bpmn20.xml")
+  @Test
+    public void testTriggerAdHocActivitiesAfterIdleStartActivatesTasks() {
+    ProcessInstance processInstance = runtimeService.startProcessInstanceByKey("adHocSubProcessBasic");
+
+    Execution adHocExecution = runtimeService.createExecutionQuery()
+        .processInstanceId(processInstance.getId())
+        .activityId("adHocSubProcess")
+        .singleResult();
+
+    runtimeService.triggerAdHocActivities(adHocExecution.getId(), Arrays.asList("taskA", "taskB"), null);
+
+    Task taskA = taskService.createTaskQuery()
+        .processInstanceId(processInstance.getId())
+        .taskDefinitionKey("taskA")
+        .singleResult();
+    Task taskB = taskService.createTaskQuery()
+        .processInstanceId(processInstance.getId())
+        .taskDefinitionKey("taskB")
+        .singleResult();
+
+    assertNotNull(taskA);
+    assertNotNull(taskB);
+
+    taskService.complete(taskA.getId());
+    taskService.complete(taskB.getId());
+
+    Execution remainingAdHocExecution = runtimeService.createExecutionQuery()
+        .processInstanceId(processInstance.getId())
+        .activityId("adHocSubProcess")
+        .singleResult();
+
+    assertNotNull(remainingAdHocExecution);
+    assertNull(taskService.createTaskQuery()
+        .processInstanceId(processInstance.getId())
+        .taskDefinitionKey("taskAfter")
+        .singleResult());
   }
 
   @Deployment(resources = "org/finos/fluxnova/bpm/engine/test/bpmn/subprocess/AdHocSubProcessTest.testStarterActivitiesFlowToDownstreamTask.bpmn20.xml")

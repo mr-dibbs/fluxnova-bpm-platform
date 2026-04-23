@@ -35,9 +35,11 @@ import org.finos.fluxnova.bpm.engine.impl.pvm.process.ActivityImpl;
  */
 public class AdHocSubProcessActivityBehavior extends AbstractBpmnActivityBehavior implements CompositeActivityBehavior {
 
+  protected static final String VARIABLE_AD_HOC_ACTIVITY_STARTED = "adHocActivityStarted";
+
   /**
    * On entry into an ad-hoc subprocess, only starter activities named in the
-    * required {@code activeTasksCollection} extension property are activated in parallel.
+    * optional {@code activeTasksCollection} extension property are activated in parallel.
    */
   @Override
   public void execute(ActivityExecution execution) throws Exception {
@@ -68,7 +70,7 @@ public class AdHocSubProcessActivityBehavior extends AbstractBpmnActivityBehavio
     scopeExecution.forceUpdate();
 
     // Evaluate before pruning so ad-hoc scope metadata and active children are still intact.
-    evaluateCompletionCondition(scopeExecution);
+    evaluateCompletionCondition(scopeExecution, adHocScopeActivity);
 
     // If completion handling moved execution out of the ad-hoc scope, stop here.
     if (scopeExecution.getActivity() != adHocScopeActivity) {
@@ -97,13 +99,23 @@ public class AdHocSubProcessActivityBehavior extends AbstractBpmnActivityBehavio
    * simply remains open.
    */
   protected void evaluateCompletionCondition(ActivityExecution scopeExecution) {
-    Condition completionCondition = (Condition) scopeExecution.getActivity()
+    evaluateCompletionCondition(scopeExecution, (ActivityImpl) scopeExecution.getActivity());
+  }
+
+  protected void evaluateCompletionCondition(ActivityExecution scopeExecution, ActivityImpl scopeActivity) {
+    if (scopeExecution == null || scopeActivity == null) {
+      return;
+    }
+
+    Condition completionCondition = (Condition) scopeActivity
         .getProperty(BpmnParse.PROPERTYNAME_AD_HOC_COMPLETION_CONDITION);
 
     boolean conditionMet;
     if (completionCondition == null) {
-      // No condition: complete when this execution is still the ad-hoc scope and no child executions remain.
-      conditionMet = isAdHocScopeExecution(scopeExecution) && scopeExecution.getExecutions().isEmpty();
+      // No condition: complete only after at least one ad-hoc activity was started and none remain active.
+      conditionMet = hasStartedAdHocActivity(scopeExecution)
+          && isAdHocScopeActivity(scopeActivity)
+          && !hasActiveChildExecutions(scopeExecution);
     } else {
       conditionMet = completionCondition.evaluate(scopeExecution, scopeExecution);
     }
@@ -113,7 +125,7 @@ public class AdHocSubProcessActivityBehavior extends AbstractBpmnActivityBehavio
     }
 
     boolean cancelRemaining = Boolean.TRUE.equals(
-        scopeExecution.getActivity().getProperty(BpmnParse.PROPERTYNAME_AD_HOC_CANCEL_REMAINING));
+      scopeActivity.getProperty(BpmnParse.PROPERTYNAME_AD_HOC_CANCEL_REMAINING));
 
     if (cancelRemaining) {
       cancelAllActiveChildren(scopeExecution);
@@ -133,6 +145,15 @@ public class AdHocSubProcessActivityBehavior extends AbstractBpmnActivityBehavio
     }
 
     Object type = execution.getActivity().getProperty(BpmnProperties.TYPE.getName());
+    return ActivityTypes.SUB_PROCESS_AD_HOC.equals(type);
+  }
+
+  protected boolean isAdHocScopeActivity(ActivityImpl activity) {
+    if (activity == null) {
+      return false;
+    }
+
+    Object type = activity.getProperty(BpmnProperties.TYPE.getName());
     return ActivityTypes.SUB_PROCESS_AD_HOC.equals(type);
   }
 
@@ -167,12 +188,14 @@ public class AdHocSubProcessActivityBehavior extends AbstractBpmnActivityBehavio
         .getProperty(BpmnParse.PROPERTYNAME_AD_HOC_ACTIVE_TASKS_COLLECTION);
 
     if (activeTasksCollection == null) {
-      throw new BadUserRequestException(
-          "activeTasksCollection extension property must be provided for adHocSubProcess '"
-              + scopeExecution.getActivity().getId() + "'");
+      return new ArrayList<>();
     }
 
     Object activeTasks = activeTasksCollection.getValue(scopeExecution);
+
+    if (activeTasks == null) {
+      return new ArrayList<>();
+    }
 
     if (activeTasks instanceof Collection<?>) {
       List<String> activityIds = new ArrayList<>();
@@ -212,9 +235,7 @@ public class AdHocSubProcessActivityBehavior extends AbstractBpmnActivityBehavio
       List<ActivityImpl> starterActivities,
       List<String> configuredActiveTaskIds) {
     if (configuredActiveTaskIds.isEmpty()) {
-      throw new BadUserRequestException(
-          "activeTasksCollection must contain at least one starter activity for adHocSubProcess '"
-              + scopeExecution.getActivity().getId() + "'");
+      return;
     }
 
     Set<String> starterActivityIds = starterActivities.stream()
@@ -256,11 +277,21 @@ public class AdHocSubProcessActivityBehavior extends AbstractBpmnActivityBehavio
 
 
   protected void startAdHocActivity(ActivityExecution scopeExecution, ActivityImpl targetActivity) {
+    markAdHocActivityStarted(scopeExecution);
     ActivityExecution childExecution = scopeExecution.createExecution();
     scopeExecution.forceUpdate();
     childExecution.setConcurrent(true);
     childExecution.setScope(false);
     childExecution.executeActivity(targetActivity);
+  }
+
+  protected boolean hasStartedAdHocActivity(ActivityExecution scopeExecution) {
+    return scopeExecution.hasVariableLocal(VARIABLE_AD_HOC_ACTIVITY_STARTED)
+        && Boolean.TRUE.equals(scopeExecution.getVariableLocal(VARIABLE_AD_HOC_ACTIVITY_STARTED));
+  }
+
+  public void markAdHocActivityStarted(ActivityExecution scopeExecution) {
+    scopeExecution.setVariableLocal(VARIABLE_AD_HOC_ACTIVITY_STARTED, true);
   }
 
   @Override
