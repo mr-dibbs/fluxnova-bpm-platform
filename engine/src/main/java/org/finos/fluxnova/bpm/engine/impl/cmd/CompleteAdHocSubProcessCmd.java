@@ -3,9 +3,11 @@ package org.finos.fluxnova.bpm.engine.impl.cmd;
 import static org.finos.fluxnova.bpm.engine.impl.util.EnsureUtil.ensureNotNull;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Map;
 import org.finos.fluxnova.bpm.engine.BadUserRequestException;
 import org.finos.fluxnova.bpm.engine.impl.bpmn.behavior.AdHocSubProcessActivityBehavior;
+import org.finos.fluxnova.bpm.engine.impl.bpmn.parser.BpmnParse;
 import org.finos.fluxnova.bpm.engine.impl.cfg.CommandChecker;
 import org.finos.fluxnova.bpm.engine.impl.interceptor.Command;
 import org.finos.fluxnova.bpm.engine.impl.interceptor.CommandContext;
@@ -14,7 +16,8 @@ import org.finos.fluxnova.bpm.engine.impl.pvm.delegate.ActivityExecution;
 import org.finos.fluxnova.bpm.engine.impl.pvm.process.ActivityImpl;
 
 /**
- * Completes an active ad-hoc subprocess execution when no inner activities are active.
+ * Completes an active ad-hoc subprocess execution, canceling active children only when
+ * {@code cancelRemainingInstances} is enabled on the ad-hoc scope.
  */
 public class CompleteAdHocSubProcessCmd implements Command<Void>, Serializable {
 
@@ -51,9 +54,18 @@ public class CompleteAdHocSubProcessCmd implements Command<Void>, Serializable {
     }
 
     boolean hasActiveChildren = execution.getExecutions().stream().anyMatch(ActivityExecution::isActive);
+    boolean cancelRemainingInstances = !Boolean.FALSE.equals(
+        adHocActivity.getProperty(BpmnParse.PROPERTYNAME_AD_HOC_CANCEL_REMAINING));
     if (hasActiveChildren) {
-      throw new BadUserRequestException(
-          "adHocSubProcess " + adHocActivity.getId() + " has active child activities and cannot be completed");
+      if (!cancelRemainingInstances) {
+        throw new BadUserRequestException(
+            "adHocSubProcess " + adHocActivity.getId() + " has active child activities and cannot be completed");
+      }
+
+      for (ActivityExecution child : new ArrayList<>(execution.getExecutions())) {
+        child.interrupt("adHocSubProcessCompleted");
+        child.remove();
+      }
     }
 
     if (variables != null && !variables.isEmpty()) {

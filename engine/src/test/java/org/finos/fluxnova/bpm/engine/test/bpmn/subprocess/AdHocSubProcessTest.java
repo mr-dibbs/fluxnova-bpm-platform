@@ -90,7 +90,7 @@ public class AdHocSubProcessTest extends PluggableProcessEngineTest {
     assertNotNull(taskAfter);
   }
 
-  @Deployment(resources = "org/finos/fluxnova/bpm/engine/test/bpmn/subprocess/AdHocSubProcessTest.testMissingActiveTasksCollectionFailsAdHocStart.bpmn20.xml")
+  @Deployment(resources = "org/finos/fluxnova/bpm/engine/test/bpmn/subprocess/AdHocSubProcessTest.testMissingActiveTasksCollectionLeavesAdHocSubProcessActive.bpmn20.xml")
   @Test
   public void testMissingActiveTasksCollectionLeavesAdHocSubProcessActive() {
     ProcessInstance processInstance = runtimeService.startProcessInstanceByKey("adHocSubProcessBasic");
@@ -134,7 +134,7 @@ public class AdHocSubProcessTest extends PluggableProcessEngineTest {
         .singleResult());
   }
 
-  @Deployment(resources = "org/finos/fluxnova/bpm/engine/test/bpmn/subprocess/AdHocSubProcessTest.testMissingActiveTasksCollectionFailsAdHocStart.bpmn20.xml")
+  @Deployment(resources = "org/finos/fluxnova/bpm/engine/test/bpmn/subprocess/AdHocSubProcessTest.testTriggerAdHocActivitiesAfterIdleStartActivatesTasks.bpmn20.xml")
   @Test
   public void testTriggerAdHocActivitiesAfterIdleStartActivatesTasks() {
     ProcessInstance processInstance = runtimeService.startProcessInstanceByKey("adHocSubProcessBasic");
@@ -172,7 +172,7 @@ public class AdHocSubProcessTest extends PluggableProcessEngineTest {
         .singleResult());
   }
 
-  @Deployment(resources = "org/finos/fluxnova/bpm/engine/test/bpmn/subprocess/AdHocSubProcessTest.testMissingActiveTasksCollectionFailsAdHocStart.bpmn20.xml")
+  @Deployment(resources = "org/finos/fluxnova/bpm/engine/test/bpmn/subprocess/AdHocSubProcessTest.testCompleteAdHocSubProcessAfterIdleStart.bpmn20.xml")
   @Test
   public void testCompleteAdHocSubProcessAfterIdleStart() {
     ProcessInstance processInstance = runtimeService.startProcessInstanceByKey("adHocSubProcessBasic");
@@ -197,7 +197,7 @@ public class AdHocSubProcessTest extends PluggableProcessEngineTest {
         .singleResult());
   }
 
-    @Deployment(resources = "org/finos/fluxnova/bpm/engine/test/bpmn/subprocess/AdHocSubProcessTest.testMissingActiveTasksCollectionFailsAdHocStart.bpmn20.xml")
+    @Deployment(resources = "org/finos/fluxnova/bpm/engine/test/bpmn/subprocess/AdHocSubProcessTest.testCompleteAdHocSubProcessWithVariablesAfterIdleStart.bpmn20.xml")
     @Test
     public void testCompleteAdHocSubProcessWithVariablesAfterIdleStart() {
     ProcessInstance processInstance = runtimeService.startProcessInstanceByKey("adHocSubProcessBasic");
@@ -225,10 +225,44 @@ public class AdHocSubProcessTest extends PluggableProcessEngineTest {
       .singleResult());
     }
 
-  @Deployment
+  @Deployment(resources = "org/finos/fluxnova/bpm/engine/test/bpmn/subprocess/AdHocSubProcessTest.testCompleteAdHocSubProcessCancelsActiveActivitiesWhenCancelRemainingInstancesIsTrue.bpmn20.xml")
   @Test
-  public void testCompleteAdHocSubProcessFailsWhenActivitiesAreActive() {
+  public void testCompleteAdHocSubProcessCancelsActiveActivitiesWhenCancelRemainingInstancesIsTrue() {
     ProcessInstance processInstance = runtimeService.startProcessInstanceByKey("adHocSubProcessBasic");
+
+    Execution adHocExecution = runtimeService.createExecutionQuery()
+        .processInstanceId(processInstance.getId())
+        .activityId("adHocSubProcess")
+        .singleResult();
+
+    assertNotNull(adHocExecution);
+
+    runtimeService.completeAdHocSubProcess(adHocExecution.getId());
+
+    assertNull(taskService.createTaskQuery()
+        .processInstanceId(processInstance.getId())
+        .taskDefinitionKey("taskA")
+        .singleResult());
+    assertNull(taskService.createTaskQuery()
+        .processInstanceId(processInstance.getId())
+        .taskDefinitionKey("taskB")
+        .singleResult());
+
+    assertNull(runtimeService.createExecutionQuery()
+        .processInstanceId(processInstance.getId())
+        .activityId("adHocSubProcess")
+        .singleResult());
+
+    assertNotNull(taskService.createTaskQuery()
+        .processInstanceId(processInstance.getId())
+        .taskDefinitionKey("taskAfter")
+        .singleResult());
+  }
+
+  @Deployment(resources = "org/finos/fluxnova/bpm/engine/test/bpmn/subprocess/AdHocSubProcessTest.testCompleteAdHocSubProcessFailsWhenActivitiesAreActiveAndCancelRemainingInstancesIsFalse.bpmn20.xml")
+  @Test
+  public void testCompleteAdHocSubProcessFailsWhenActivitiesAreActiveAndCancelRemainingInstancesIsFalse() {
+    ProcessInstance processInstance = runtimeService.startProcessInstanceByKey("adHocSubProcessCancelRemainingFalse");
 
     Execution adHocExecution = runtimeService.createExecutionQuery()
         .processInstanceId(processInstance.getId())
