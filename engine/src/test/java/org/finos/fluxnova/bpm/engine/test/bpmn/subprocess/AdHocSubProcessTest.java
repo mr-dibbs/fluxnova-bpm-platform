@@ -568,6 +568,84 @@ public class AdHocSubProcessTest extends PluggableProcessEngineTest {
     assertNotNull(taskAfter);
   }
 
+  @Deployment(resources = "org/finos/fluxnova/bpm/engine/test/bpmn/subprocess/AdHocSubProcessTest.testAutoCompleteFalseKeepsScopeOpenAfterActivitiesComplete.bpmn20.xml")
+  @Test
+  public void testAutoCompleteFalseKeepsScopeOpenAfterActivitiesComplete() {
+    ProcessInstance processInstance = runtimeService.startProcessInstanceByKey("adHocSubProcessAutoCompleteFalse");
+
+    Task taskA = taskService.createTaskQuery()
+        .processInstanceId(processInstance.getId())
+        .taskDefinitionKey("taskA")
+        .singleResult();
+
+    Task taskB = taskService.createTaskQuery()
+        .processInstanceId(processInstance.getId())
+        .taskDefinitionKey("taskB")
+        .singleResult();
+
+    assertNotNull(taskA);
+    assertNotNull(taskB);
+
+    taskService.complete(taskA.getId());
+    taskService.complete(taskB.getId());
+
+    Execution adHocExecution = runtimeService.createExecutionQuery()
+        .processInstanceId(processInstance.getId())
+        .activityId("adHocSubProcess")
+        .singleResult();
+
+    assertNotNull(adHocExecution);
+    assertNull(taskService.createTaskQuery()
+        .processInstanceId(processInstance.getId())
+        .taskDefinitionKey("taskAfter")
+        .singleResult());
+
+    runtimeService.completeAdHocSubProcess(adHocExecution.getId());
+
+    assertNull(runtimeService.createExecutionQuery()
+        .processInstanceId(processInstance.getId())
+        .activityId("adHocSubProcess")
+        .singleResult());
+
+    assertNotNull(taskService.createTaskQuery()
+        .processInstanceId(processInstance.getId())
+        .taskDefinitionKey("taskAfter")
+        .singleResult());
+  }
+
+  @Deployment(resources = "org/finos/fluxnova/bpm/engine/test/bpmn/subprocess/AdHocSubProcessTest.testAutoCompleteFalseStillHonorsCompletionCondition.bpmn20.xml")
+  @Test
+  public void testAutoCompleteFalseStillHonorsCompletionCondition() {
+    ProcessInstance processInstance = runtimeService.startProcessInstanceByKey(
+        "adHocSubProcessCompletionConditionAutoCompleteFalse",
+        Collections.singletonMap("approved", false));
+
+    Task taskA = taskService.createTaskQuery()
+        .processInstanceId(processInstance.getId())
+        .taskDefinitionKey("taskA")
+        .singleResult();
+
+    Task taskB = taskService.createTaskQuery()
+        .processInstanceId(processInstance.getId())
+        .taskDefinitionKey("taskB")
+        .singleResult();
+
+    assertNotNull(taskA);
+    assertNotNull(taskB);
+
+    taskService.complete(taskA.getId(), Collections.singletonMap("approved", true));
+
+    assertNull(taskService.createTaskQuery()
+        .processInstanceId(processInstance.getId())
+        .taskDefinitionKey("taskB")
+        .singleResult());
+
+    assertNotNull(taskService.createTaskQuery()
+        .processInstanceId(processInstance.getId())
+        .taskDefinitionKey("taskAfter")
+        .singleResult());
+  }
+
   @Deployment
   @Test
   public void testBoundaryErrorEventOnAdHocSubProcess() {

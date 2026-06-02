@@ -360,6 +360,7 @@ public final class BpmnModelConstants {
   public static final String BPMN_ATTRIBUTE_TRIGGERED_BY_EVENT = "triggeredByEvent";
   public static final String BPMN_ATTRIBUTE_ORDERING = "ordering";
   public static final String BPMN_ATTRIBUTE_CANCEL_REMAINING_INSTANCES = "cancelRemainingInstances";
+  public static final String BPMN_ATTRIBUTE_AUTO_COMPLETE = "autoComplete";
   public static final String BPMN_ATTRIBUTE_GATEWAY_DIRECTION = "gatewayDirection";
   public static final String BPMN_ATTRIBUTE_CALLED_ELEMENT = "calledElement";
   public static final String BPMN_ATTRIBUTE_MINIMUM = "minimum";

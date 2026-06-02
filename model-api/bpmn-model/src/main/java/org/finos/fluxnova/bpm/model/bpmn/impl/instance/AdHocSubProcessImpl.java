@@ -1,8 +1,10 @@
 package org.finos.fluxnova.bpm.model.bpmn.impl.instance;
 
 import static org.finos.fluxnova.bpm.model.bpmn.impl.BpmnModelConstants.BPMN20_NS;
+import static org.finos.fluxnova.bpm.model.bpmn.impl.BpmnModelConstants.BPMN_ATTRIBUTE_AUTO_COMPLETE;
 import static org.finos.fluxnova.bpm.model.bpmn.impl.BpmnModelConstants.BPMN_ATTRIBUTE_CANCEL_REMAINING_INSTANCES;
 import static org.finos.fluxnova.bpm.model.bpmn.impl.BpmnModelConstants.BPMN_ATTRIBUTE_ORDERING;
+import static org.finos.fluxnova.bpm.model.bpmn.impl.BpmnModelConstants.CAMUNDA_NS;
 import static org.finos.fluxnova.bpm.model.bpmn.impl.BpmnModelConstants.BPMN_ELEMENT_AD_HOC_SUB_PROCESS;
 
 import org.finos.fluxnova.bpm.model.bpmn.instance.AdHocSubProcess;
@@ -27,6 +29,7 @@ public class AdHocSubProcessImpl extends SubProcessImpl implements AdHocSubProce
 
   protected static Attribute<String> orderingAttribute;
   protected static Attribute<Boolean> cancelRemainingInstancesAttribute;
+  protected static Attribute<Boolean> autoCompleteAttribute;
   protected static ChildElement<CompletionCondition> completionConditionChild;
 
   public static void registerType(ModelBuilder modelBuilder) {
@@ -45,6 +48,11 @@ public class AdHocSubProcessImpl extends SubProcessImpl implements AdHocSubProce
       .build();
 
     cancelRemainingInstancesAttribute = typeBuilder.booleanAttribute(BPMN_ATTRIBUTE_CANCEL_REMAINING_INSTANCES)
+      .defaultValue(true)
+      .build();
+
+    autoCompleteAttribute = typeBuilder.booleanAttribute(BPMN_ATTRIBUTE_AUTO_COMPLETE)
+      .namespace(CAMUNDA_NS)
       .defaultValue(true)
       .build();
 
@@ -81,6 +89,17 @@ public class AdHocSubProcessImpl extends SubProcessImpl implements AdHocSubProce
   @Override
   public void setCancelRemainingInstances(boolean cancelRemainingInstances) {
     cancelRemainingInstancesAttribute.setValue(this, cancelRemainingInstances);
+  }
+
+  @Override
+  public boolean isAutoComplete() {
+    Boolean value = autoCompleteAttribute.getValue(this);
+    return value == null ? true : value;
+  }
+
+  @Override
+  public void setAutoComplete(boolean autoComplete) {
+    autoCompleteAttribute.setValue(this, autoComplete);
   }
 
   @Override

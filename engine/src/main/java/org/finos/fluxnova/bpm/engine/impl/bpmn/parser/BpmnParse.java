@@ -205,6 +205,7 @@ public class BpmnParse extends Parse {
   public static final String PROPERTYNAME_JOB_PRIORITY = "jobPriority";
   public static final String PROPERTYNAME_TASK_PRIORITY = "taskPriority";
   public static final String PROPERTYNAME_AD_HOC_CANCEL_REMAINING = "adHocCancelRemainingInstances";
+  public static final String PROPERTYNAME_AD_HOC_AUTO_COMPLETE = "adHocAutoComplete";
   public static final String PROPERTYNAME_AD_HOC_COMPLETION_CONDITION = "adHocCompletionCondition";
   public static final String PROPERTYNAME_AD_HOC_COMPLETION_CONDITION_TEXT = "adHocCompletionConditionText";
   public static final String PROPERTYNAME_AD_HOC_ACTIVE_TASKS_COLLECTION = "adHocActiveTasksCollection";
@@ -3918,6 +3919,13 @@ public class BpmnParse extends Parse {
 
     boolean cancelRemainingInstances = parseBooleanAttribute(adHocSubProcessElement.attribute("cancelRemainingInstances"), true);
     adHocSubProcessActivity.setProperty(PROPERTYNAME_AD_HOC_CANCEL_REMAINING, cancelRemainingInstances);
+
+    String autoCompleteText = adHocSubProcessElement.attributeNS(FLUXNOVA_BPMN_EXTENSIONS_NS, "autoComplete");
+    if (autoCompleteText == null) {
+      autoCompleteText = adHocSubProcessElement.attributeNS(CAMUNDA_BPMN_EXTENSIONS_NS, "autoComplete");
+    }
+    boolean autoComplete = parseBooleanAttribute(autoCompleteText, true);
+    adHocSubProcessActivity.setProperty(PROPERTYNAME_AD_HOC_AUTO_COMPLETE, autoComplete);
 
     Element completionConditionElement = adHocSubProcessElement.element("completionCondition");
     if (completionConditionElement != null) {

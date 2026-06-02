@@ -109,11 +109,14 @@ public class AdHocSubProcessActivityBehavior extends AbstractBpmnActivityBehavio
 
     Condition completionCondition = (Condition) scopeActivity
         .getProperty(BpmnParse.PROPERTYNAME_AD_HOC_COMPLETION_CONDITION);
+    boolean autoComplete = !Boolean.FALSE.equals(
+        scopeActivity.getProperty(BpmnParse.PROPERTYNAME_AD_HOC_AUTO_COMPLETE));
 
     boolean conditionMet;
     if (completionCondition == null) {
-      // No condition: complete only after at least one ad-hoc activity was started and none remain active.
-      conditionMet = hasStartedAdHocActivity(scopeExecution)
+      // No completion condition: auto-complete only when configured and no active ad-hoc activity remains.
+      conditionMet = autoComplete
+          && hasStartedAdHocActivity(scopeExecution)
           && isAdHocScopeActivity(scopeActivity)
           && !hasActiveChildExecutions(scopeExecution);
     } else {

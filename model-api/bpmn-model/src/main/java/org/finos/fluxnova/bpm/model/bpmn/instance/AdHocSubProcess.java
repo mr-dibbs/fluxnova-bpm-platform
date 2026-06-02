@@ -32,6 +32,16 @@ public interface AdHocSubProcess extends SubProcess {
   void setCancelRemainingInstances(boolean cancelRemainingInstances);
 
   /**
+   * If true (default), an ad-hoc subprocess without completionCondition
+   * auto-completes after started activities have finished. If false, it
+   * remains active until completionCondition is met or completion is triggered
+   * explicitly.
+   */
+  boolean isAutoComplete();
+
+  void setAutoComplete(boolean autoComplete);
+
+  /**
    * The Expression that, when evaluated to true, signals that the Ad-Hoc
    * Sub-Process should complete.
    */
