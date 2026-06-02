@@ -1,5 +1,6 @@
 package org.finos.fluxnova.bpm.engine.impl.bpmn.behavior;
 
+import java.util.Set;
 import org.finos.fluxnova.bpm.engine.ActivityTypes;
 import org.finos.fluxnova.bpm.engine.impl.bpmn.helper.BpmnProperties;
 import org.finos.fluxnova.bpm.engine.impl.pvm.PvmTransition;
@@ -7,56 +8,38 @@ import org.finos.fluxnova.bpm.engine.impl.pvm.process.ActivityImpl;
 
 /**
  * Shared validation utilities for ad-hoc subprocess activity filtering and authorization.
- * Centralizes activity type blacklist and scope boundary checks used by both
+ * Centralizes startable activity type whitelist and scope boundary checks used by both
  * {@link AdHocSubProcessActivityBehavior} and the trigger command.
  */
 public class AdHocSubProcessValidationHelper {
+
+  protected static final Set<String> STARTABLE_AD_HOC_ACTIVITY_TYPES = Set.of(
+      ActivityTypes.TASK,
+      ActivityTypes.TASK_SCRIPT,
+      ActivityTypes.TASK_SERVICE,
+      ActivityTypes.TASK_BUSINESS_RULE,
+      ActivityTypes.TASK_MANUAL_TASK,
+      ActivityTypes.TASK_USER_TASK,
+      ActivityTypes.TASK_SEND_TASK,
+      ActivityTypes.TASK_RECEIVE_TASK,
+      ActivityTypes.CALL_ACTIVITY,
+      ActivityTypes.SUB_PROCESS,
+      ActivityTypes.SUB_PROCESS_AD_HOC
+  );
 
   private AdHocSubProcessValidationHelper() {
     // Static utility class
   }
 
   /**
-   * Checks if an activity type should be excluded from ad-hoc startup.
-   * Returns true for gateways, events, and boundary events that cannot be started.
+   * Checks if an activity type is allowed for ad-hoc startup.
+   * Only task activity types are startable by default.
    *
    * @param type the BPMN activity type
-   * @return true if the type is non-startable in ad-hoc scope
+   * @return true if the type is startable in ad-hoc scope
    */
-  public static boolean isNonStartableActivityType(String type) {
-    if (type == null) {
-      return false;
-    }
-
-    return ActivityTypes.GATEWAY_EXCLUSIVE.equals(type)
-        || ActivityTypes.GATEWAY_INCLUSIVE.equals(type)
-        || ActivityTypes.GATEWAY_PARALLEL.equals(type)
-        || ActivityTypes.GATEWAY_COMPLEX.equals(type)
-        || ActivityTypes.GATEWAY_EVENT_BASED.equals(type)
-        || ActivityTypes.START_EVENT.equals(type)
-        || ActivityTypes.START_EVENT_TIMER.equals(type)
-        || ActivityTypes.START_EVENT_MESSAGE.equals(type)
-        || ActivityTypes.START_EVENT_SIGNAL.equals(type)
-        || ActivityTypes.START_EVENT_ESCALATION.equals(type)
-        || ActivityTypes.START_EVENT_COMPENSATION.equals(type)
-        || ActivityTypes.START_EVENT_ERROR.equals(type)
-        || ActivityTypes.START_EVENT_CONDITIONAL.equals(type)
-        || ActivityTypes.END_EVENT_NONE.equals(type)
-        || ActivityTypes.END_EVENT_ERROR.equals(type)
-        || ActivityTypes.END_EVENT_CANCEL.equals(type)
-        || ActivityTypes.END_EVENT_TERMINATE.equals(type)
-        || ActivityTypes.END_EVENT_MESSAGE.equals(type)
-        || ActivityTypes.END_EVENT_SIGNAL.equals(type)
-        || ActivityTypes.END_EVENT_COMPENSATION.equals(type)
-        || ActivityTypes.END_EVENT_ESCALATION.equals(type)
-        || ActivityTypes.BOUNDARY_TIMER.equals(type)
-        || ActivityTypes.BOUNDARY_MESSAGE.equals(type)
-        || ActivityTypes.BOUNDARY_SIGNAL.equals(type)
-        || ActivityTypes.BOUNDARY_COMPENSATION.equals(type)
-        || ActivityTypes.BOUNDARY_ERROR.equals(type)
-        || ActivityTypes.BOUNDARY_ESCALATION.equals(type)
-        || ActivityTypes.BOUNDARY_CANCEL.equals(type)
-        || ActivityTypes.BOUNDARY_CONDITIONAL.equals(type);
+  public static boolean isStartableActivityType(String type) {
+    return type != null && STARTABLE_AD_HOC_ACTIVITY_TYPES.contains(type);
   }
 
   /**
@@ -94,7 +77,7 @@ public class AdHocSubProcessValidationHelper {
     }
 
     String type = (String) activity.getProperty(BpmnProperties.TYPE.getName());
-    if (isNonStartableActivityType(type)) {
+    if (!isStartableActivityType(type)) {
       return false;
     }
 
