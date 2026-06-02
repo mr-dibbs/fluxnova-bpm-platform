@@ -44,6 +44,7 @@ import org.finos.fluxnova.bpm.engine.impl.Condition;
 import org.finos.fluxnova.bpm.engine.impl.HistoryTimeToLiveParser;
 import org.finos.fluxnova.bpm.engine.impl.ProcessEngineLogger;
 import org.finos.fluxnova.bpm.engine.impl.bpmn.behavior.AdHocSubProcessActivityBehavior;
+import org.finos.fluxnova.bpm.engine.impl.bpmn.behavior.AdHocSubProcessValidationHelper;
 import org.finos.fluxnova.bpm.engine.impl.bpmn.behavior.BoundaryConditionalEventActivityBehavior;
 import org.finos.fluxnova.bpm.engine.impl.bpmn.behavior.BoundaryEventActivityBehavior;
 import org.finos.fluxnova.bpm.engine.impl.bpmn.behavior.CallActivityBehavior;
@@ -3929,9 +3930,15 @@ public class BpmnParse extends Parse {
 
     Element completionConditionElement = adHocSubProcessElement.element("completionCondition");
     if (completionConditionElement != null) {
-      Condition completionCondition = parseConditionExpression(completionConditionElement, adHocSubProcessActivity.getId());
-      adHocSubProcessActivity.setProperty(PROPERTYNAME_AD_HOC_COMPLETION_CONDITION, completionCondition);
-      adHocSubProcessActivity.setProperty(PROPERTYNAME_AD_HOC_COMPLETION_CONDITION_TEXT, completionConditionElement.getText().trim());
+      String completionConditionText = completionConditionElement.getText();
+      if (completionConditionText == null || completionConditionText.trim().isEmpty()) {
+        addError("adHocSubProcess completionCondition must not be empty", completionConditionElement, adHocSubProcessActivity.getId());
+      } else {
+        String trimmedCompletionConditionText = completionConditionText.trim();
+        Condition completionCondition = parseConditionExpression(completionConditionElement, adHocSubProcessActivity.getId());
+        adHocSubProcessActivity.setProperty(PROPERTYNAME_AD_HOC_COMPLETION_CONDITION, completionCondition);
+        adHocSubProcessActivity.setProperty(PROPERTYNAME_AD_HOC_COMPLETION_CONDITION_TEXT, trimmedCompletionConditionText);
+      }
     }
 
     Map<String, String> extensionProperties = parseFluxnovaExtensionProperties(adHocSubProcessElement);
@@ -3949,6 +3956,7 @@ public class BpmnParse extends Parse {
     adHocSubProcessActivity.setScope(true);
     adHocSubProcessActivity.setActivityBehavior(new AdHocSubProcessActivityBehavior());
     parseScope(adHocSubProcessElement, adHocSubProcessActivity);
+    validateAdHocSubProcessParseConstraints(adHocSubProcessElement, adHocSubProcessActivity);
     parseActivityInputOutput(adHocSubProcessElement, adHocSubProcessActivity);
 
     for (BpmnParseListener parseListener : parseListeners) {
@@ -3956,6 +3964,36 @@ public class BpmnParse extends Parse {
     }
 
     return adHocSubProcessActivity;
+  }
+
+  protected void validateAdHocSubProcessParseConstraints(Element adHocSubProcessElement, ActivityImpl adHocSubProcessActivity) {
+    if (Boolean.TRUE.equals(parseBooleanAttribute(adHocSubProcessElement.attribute("triggeredByEvent"), false))) {
+      addError("attribute 'triggeredByEvent=true' is not allowed on adHocSubProcess", adHocSubProcessElement, adHocSubProcessActivity.getId());
+    }
+
+    List<Element> startEventElements = adHocSubProcessElement.elements("startEvent");
+    for (Element startEventElement : startEventElements) {
+      addError("startEvent is not allowed in adHocSubProcess", startEventElement, adHocSubProcessActivity.getId());
+    }
+
+    boolean hasStartableChildActivity = false;
+    for (ActivityImpl activity : adHocSubProcessActivity.getActivities()) {
+      if (AdHocSubProcessValidationHelper.isStartableActivityInAdHocScope(adHocSubProcessActivity, activity)) {
+        hasStartableChildActivity = true;
+        break;
+      }
+    }
+
+    if (!hasStartableChildActivity) {
+      addError("adHocSubProcess must define at least one triggerable activity", adHocSubProcessElement, adHocSubProcessActivity.getId());
+    }
+
+    if (Boolean.FALSE.equals(adHocSubProcessActivity.getProperty(PROPERTYNAME_AD_HOC_AUTO_COMPLETE))
+        && adHocSubProcessActivity.getProperty(PROPERTYNAME_AD_HOC_COMPLETION_CONDITION) == null) {
+      addWarning("adHocSubProcess has autoComplete='false' without completionCondition and may remain active until completed manually",
+          adHocSubProcessElement,
+          adHocSubProcessActivity.getId());
+    }
   }
 
   protected ActivityImpl parseTransaction(Element transactionElement, ScopeImpl scope) {

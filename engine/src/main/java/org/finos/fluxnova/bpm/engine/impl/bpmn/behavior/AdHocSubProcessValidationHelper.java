@@ -76,6 +76,11 @@ public class AdHocSubProcessValidationHelper {
       return false;
     }
 
+    if (ActivityTypes.SUB_PROCESS.equals(activity.getProperty(BpmnProperties.TYPE.getName()))
+        && Boolean.TRUE.equals(activity.getProperty(BpmnProperties.TRIGGERED_BY_EVENT.getName()))) {
+      return false;
+    }
+
     String type = (String) activity.getProperty(BpmnProperties.TYPE.getName());
     if (!isStartableActivityType(type)) {
       return false;
