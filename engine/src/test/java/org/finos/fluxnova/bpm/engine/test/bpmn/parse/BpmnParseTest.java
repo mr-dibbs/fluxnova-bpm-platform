@@ -226,6 +226,55 @@ public class BpmnParseTest {
   }
 
   @Test
+  public void testInvalidAdHocSubProcessWithStartEvent() {
+    try {
+      String resource = TestHelper.getBpmnProcessDefinitionResource(getClass(), "testInvalidAdHocSubProcessWithStartEvent");
+      repositoryService.createDeployment().name(resource).addClasspathResource(resource).deploy();
+      fail("Exception expected: ad hoc sub process with start event should not be parsed.");
+    } catch (ParseException e) {
+      testRule.assertTextPresent("startEvent is not allowed in adHocSubProcess", e.getMessage());
+      assertErrors(e.getResorceReports().get(0).getErrors(), "AdHocSubProcess_1");
+    }
+  }
+
+  @Test
+  public void testInvalidAdHocSubProcessWithoutTriggerableActivity() {
+    try {
+      String resource = TestHelper.getBpmnProcessDefinitionResource(getClass(), "testInvalidAdHocSubProcessWithoutTriggerableActivity");
+      repositoryService.createDeployment().name(resource).addClasspathResource(resource).deploy();
+      fail("Exception expected: ad hoc sub process without triggerable activity should not be parsed.");
+    } catch (ParseException e) {
+      testRule.assertTextPresent("adHocSubProcess must define at least one triggerable activity", e.getMessage());
+      assertErrors(e.getResorceReports().get(0).getErrors(), "AdHocSubProcess_1");
+    }
+  }
+
+  @Test
+  public void testInvalidAdHocSubProcessTriggeredByEvent() {
+    try {
+      String resource = TestHelper.getBpmnProcessDefinitionResource(getClass(), "testInvalidAdHocSubProcessTriggeredByEvent");
+      repositoryService.createDeployment().name(resource).addClasspathResource(resource).deploy();
+      fail("Exception expected: ad hoc sub process must not be triggered by event.");
+    } catch (ParseException e) {
+      testRule.assertTextPresent("attribute 'triggeredByEvent=true' is not allowed on adHocSubProcess", e.getMessage());
+      assertErrors(e.getResorceReports().get(0).getErrors(), "AdHocSubProcess_1");
+    }
+  }
+
+  @Test
+  public void testInvalidAdHocSubProcessWithEmptyCompletionCondition() {
+    try {
+      String resource = TestHelper.getBpmnProcessDefinitionResource(getClass(), "testInvalidAdHocSubProcessWithEmptyCompletionCondition");
+      repositoryService.createDeployment().name(resource).addClasspathResource(resource).deploy();
+      fail("Exception expected: ad hoc sub process with empty completion condition should not be parsed.");
+    } catch (ParseException e) {
+      testRule.assertTextPresent("adHocSubProcess completionCondition must not be empty", e.getMessage());
+      List<Problem> errors = e.getResorceReports().get(0).getErrors();
+      assertTrue(errors.stream().anyMatch(problem -> "AdHocSubProcess_1".equals(problem.getMainElementId())));
+    }
+  }
+
+  @Test
   public void testInvalidTransactionWithMessageStartEvent() {
     try {
       String resource = TestHelper.getBpmnProcessDefinitionResource(getClass(), "testInvalidTransactionWithMessageStartEvent");

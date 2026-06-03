@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn2:definitions xmlns:bpmn2="http://www.omg.org/spec/BPMN/20100524/MODEL"
+  targetNamespace="Examples">
+  <bpmn2:process id="Process_1" isExecutable="true">
+    <bpmn2:startEvent id="StartEvent_1" />
+    <bpmn2:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="AdHocSubProcess_1" />
+    <bpmn2:adHocSubProcess id="AdHocSubProcess_1">
+      <bpmn2:completionCondition>
+      </bpmn2:completionCondition>
+      <bpmn2:userTask id="AdHocTask_1" />
+    </bpmn2:adHocSubProcess>
+    <bpmn2:sequenceFlow id="Flow_2" sourceRef="AdHocSubProcess_1" targetRef="EndEvent_1" />
+    <bpmn2:endEvent id="EndEvent_1" />
+  </bpmn2:process>
+</bpmn2:definitions>
