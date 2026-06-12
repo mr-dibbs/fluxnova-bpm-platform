@@ -125,19 +125,19 @@ public final class BpmnParseUtil {
    */
   public static void parseInputParameterElement(Element inputParameterElement, IoMapping ioMapping) {
     String nameAttribute = inputParameterElement.attribute("name");
+    boolean isTransient = Boolean.parseBoolean(inputParameterElement.attributeNS(BpmnParse.CAMUNDA_BPMN_EXTENSIONS_NS, "isTransient"));
     if(nameAttribute == null || nameAttribute.isEmpty()) {
       throw new BpmnParseException("Missing attribute 'name' for inputParameter", inputParameterElement);
     }
 
     ParameterValueProvider valueProvider = parseNestedParamValueProvider(inputParameterElement);
-
     // add parameter
-    InputParameter inputParameter = new InputParameter(nameAttribute, valueProvider);
+      InputParameter inputParameter = new InputParameter(nameAttribute, valueProvider, isTransient);
 
-    if (isRestricted(inputParameterElement)) {
-      inputParameter.setRestricted(true);
-    }
-
+      if (isRestricted(inputParameterElement)) {
+          inputParameter.setRestricted(true);
+      }
+    // add parameter
     ioMapping.addInputParameter(inputParameter);
   }
 
@@ -150,19 +150,19 @@ public final class BpmnParseUtil {
    */
   public static void parseOutputParameterElement(Element outputParameterElement, IoMapping ioMapping) {
     String nameAttribute = outputParameterElement.attribute("name");
+    boolean isTransient = Boolean.parseBoolean(outputParameterElement.attributeNS(BpmnParse.CAMUNDA_BPMN_EXTENSIONS_NS, "isTransient"));
     if(nameAttribute == null || nameAttribute.isEmpty()) {
       throw new BpmnParseException("Missing attribute 'name' for outputParameter", outputParameterElement);
     }
 
     ParameterValueProvider valueProvider = parseNestedParamValueProvider(outputParameterElement);
+      OutputParameter outputParameter = new OutputParameter(nameAttribute, valueProvider, isTransient);
+
+      if (isRestricted(outputParameterElement)) {
+          outputParameter.setRestricted(true);
+      }
 
     // add parameter
-    OutputParameter outputParameter = new OutputParameter(nameAttribute, valueProvider);
-
-    if (isRestricted(outputParameterElement)) {
-      outputParameter.setRestricted(true);
-    }
-
     ioMapping.addOutputParameter(outputParameter);
   }
 

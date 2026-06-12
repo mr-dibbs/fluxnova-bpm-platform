@@ -20,6 +20,7 @@ import static org.finos.fluxnova.bpm.model.bpmn.impl.BpmnModelConstants.CAMUNDA_
 import static org.finos.fluxnova.bpm.model.bpmn.impl.BpmnModelConstants.CAMUNDA_ATTRIBUTE_RESTRICTED;
 import static org.finos.fluxnova.bpm.model.bpmn.impl.BpmnModelConstants.CAMUNDA_ELEMENT_INPUT_PARAMETER;
 import static org.finos.fluxnova.bpm.model.bpmn.impl.BpmnModelConstants.CAMUNDA_NS;
+import static org.finos.fluxnova.bpm.model.bpmn.impl.BpmnModelConstants.CAMUNDA_ATTRIBUTE_IS_TRANSIENT;
 
 import org.finos.fluxnova.bpm.model.bpmn.instance.fluxnova.FluxnovaInputParameter;
 import org.finos.fluxnova.bpm.model.xml.ModelBuilder;
@@ -38,6 +39,8 @@ public class FluxnovaInputParameterImpl extends FluxnovaGenericValueElementImpl 
   protected static Attribute<String> camundaNameAttribute;
   protected static Attribute<Boolean> camundaRestrictedAttribute;
 
+  protected static Attribute<Boolean> camundaInputTransientAttribute;
+
   public static void registerType(ModelBuilder modelBuilder) {
     ModelElementTypeBuilder typeBuilder = modelBuilder.defineType(FluxnovaInputParameter.class, CAMUNDA_ELEMENT_INPUT_PARAMETER)
       .namespaceUri(CAMUNDA_NS)
@@ -54,6 +57,11 @@ public class FluxnovaInputParameterImpl extends FluxnovaGenericValueElementImpl 
 
     camundaRestrictedAttribute = typeBuilder.booleanAttribute(CAMUNDA_ATTRIBUTE_RESTRICTED)
       .namespace(CAMUNDA_NS)
+      .build();
+
+    camundaInputTransientAttribute = typeBuilder.booleanAttribute(CAMUNDA_ATTRIBUTE_IS_TRANSIENT)
+      .namespace(CAMUNDA_NS)
+      .defaultValue(false)
       .build();
 
     typeBuilder.build();
@@ -77,6 +85,14 @@ public class FluxnovaInputParameterImpl extends FluxnovaGenericValueElementImpl 
 
   public void setFluxnovaRestricted(boolean camundaRestricted) {
     camundaRestrictedAttribute.setValue(this, camundaRestricted);
+  }
+
+  public boolean isFluxnovaInputTransient() {
+    return camundaInputTransientAttribute.getValue(this);
+  }
+
+  public void setFluxnovaInputTransient(boolean transientFlag) {
+    camundaInputTransientAttribute.setValue(this, transientFlag);
   }
 
 }

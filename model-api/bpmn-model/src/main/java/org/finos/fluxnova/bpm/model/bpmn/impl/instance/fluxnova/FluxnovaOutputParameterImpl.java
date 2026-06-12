@@ -28,6 +28,8 @@ import org.finos.fluxnova.bpm.model.xml.type.ModelElementTypeBuilder;
 import org.finos.fluxnova.bpm.model.xml.type.ModelElementTypeBuilder.ModelTypeInstanceProvider;
 import org.finos.fluxnova.bpm.model.xml.type.attribute.Attribute;
 
+import static org.finos.fluxnova.bpm.model.bpmn.impl.BpmnModelConstants.*;
+
 /**
  * The BPMN outputParameter camunda extension element
  *
@@ -37,6 +39,8 @@ public class FluxnovaOutputParameterImpl extends FluxnovaGenericValueElementImpl
 
   protected static Attribute<String> camundaNameAttribute;
   protected static Attribute<Boolean> camundaRestrictedAttribute;
+
+  protected static Attribute<Boolean> camundaOutputTransientAttribute;
 
   public static void registerType(ModelBuilder modelBuilder) {
     ModelElementTypeBuilder typeBuilder = modelBuilder.defineType(FluxnovaOutputParameter.class, CAMUNDA_ELEMENT_OUTPUT_PARAMETER)
@@ -56,6 +60,12 @@ public class FluxnovaOutputParameterImpl extends FluxnovaGenericValueElementImpl
       .namespace(CAMUNDA_NS)
       .build();
 
+    camundaOutputTransientAttribute = typeBuilder.booleanAttribute(CAMUNDA_ATTRIBUTE_IS_TRANSIENT)
+      .namespace(CAMUNDA_NS)
+      .defaultValue(false)
+      .build();
+
+
     typeBuilder.build();
   }
 
@@ -69,6 +79,14 @@ public class FluxnovaOutputParameterImpl extends FluxnovaGenericValueElementImpl
 
   public void setFluxnovaName(String camundaName) {
     camundaNameAttribute.setValue(this, camundaName);
+  }
+
+  public boolean isFluxnovaOutputTransient() {
+    return camundaOutputTransientAttribute.getValue(this);
+  }
+
+  public void setFluxnovaOutputTransient(boolean transientFlag) {
+    camundaOutputTransientAttribute.setValue(this, transientFlag);
   }
 
   public boolean getFluxnovaRestricted() {

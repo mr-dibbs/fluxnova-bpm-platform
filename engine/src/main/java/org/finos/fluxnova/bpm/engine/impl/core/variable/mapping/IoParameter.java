@@ -34,6 +34,8 @@ public abstract class IoParameter {
    */
   protected String name;
 
+  protected boolean isTransient;
+
   /**
    * The provider of the parameter value.
    */
@@ -44,6 +46,13 @@ public abstract class IoParameter {
   public IoParameter(String name, ParameterValueProvider valueProvider) {
     this.name = name;
     this.valueProvider = valueProvider;
+    this.isTransient = false;
+  }
+
+  public IoParameter(String name, ParameterValueProvider valueProvider, boolean isTransient) {
+    this.name = name;
+    this.valueProvider = valueProvider;
+    this.isTransient = isTransient;
   }
 
   /**
@@ -85,4 +94,11 @@ public abstract class IoParameter {
     this.restricted = restricted;
   }
 
+  public boolean getIsTransient() {
+    return isTransient;
+  }
+
+  public void setTransient(boolean isTransient) {
+    this.isTransient = isTransient;
+  }
 }
