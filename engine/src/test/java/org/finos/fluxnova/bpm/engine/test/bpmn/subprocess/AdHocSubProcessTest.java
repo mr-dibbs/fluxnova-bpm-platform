@@ -784,6 +784,114 @@ public class AdHocSubProcessTest extends PluggableProcessEngineTest {
 
     assertNotNull(taskAfter);
   }
+
+  @Deployment
+  @Test
+  public void testMultiInstanceParallelAdHocSubProcessWithIoMappedTasks() {
+    // regression test: tasks with camunda:inputOutput inside a parallel multi-instance ad hoc subprocess
+    // were failing at process start because startAdHocActivity hardcoded scope=false, creating a
+    // mismatch between the scope hierarchy (task is marked scope due to IO mapping) and the execution hierarchy
+    ProcessInstance processInstance = runtimeService.startProcessInstanceByKey(
+        "adHocSubProcessMultiInstanceParallelWithIoMappedTasks");
+
+    List<Task> adHocTasks = taskService.createTaskQuery()
+        .processInstanceId(processInstance.getId())
+        .taskDefinitionKey("taskA")
+        .list();
+
+    assertEquals(2, adHocTasks.size());
+
+    for (Task task : adHocTasks) {
+      taskService.complete(task.getId());
+    }
+
+    assertEquals(0, runtimeService.createProcessInstanceQuery().processInstanceId(processInstance.getId()).count());
+  }
+
+  @Deployment
+  @Test
+  public void testCompletionConditionCancelsRemainingIoMappedTasks() {
+    // regression test: completing a task with a variable that satisfies the completion condition
+    // while other IO-mapped tasks are still active caused an ACT_FK_VAR_EXE foreign key violation,
+    // because the ad hoc scope execution was deleted while variables still referenced it
+    ProcessInstance processInstance = runtimeService.startProcessInstanceByKey(
+        "adHocSubProcessCompletionConditionWithIoMappedTasks");
+
+    Task taskA = taskService.createTaskQuery()
+        .processInstanceId(processInstance.getId())
+        .taskDefinitionKey("taskA")
+        .singleResult();
+    assertNotNull(taskA);
+
+    // complete Task_A -> flows to Task_B (Task_C still active)
+    taskService.complete(taskA.getId());
+
+    Task taskB = taskService.createTaskQuery()
+        .processInstanceId(processInstance.getId())
+        .taskDefinitionKey("taskB")
+        .singleResult();
+    assertNotNull(taskB);
+
+    // completing Task_B with approved=true satisfies the completion condition,
+    // which cancels the still-active Task_C and leaves the subprocess
+    taskService.complete(taskB.getId(), java.util.Collections.<String, Object>singletonMap("approved", true));
+
+    assertEquals(0, runtimeService.createProcessInstanceQuery().processInstanceId(processInstance.getId()).count());
+  }
+
+  @Deployment(resources = "org/finos/fluxnova/bpm/engine/test/bpmn/subprocess/AdHocSubProcessTest.testCompletionConditionCancelsRemainingIoMappedTasks.bpmn20.xml")
+  @Test
+  public void testCompletionConditionOnMidChainTaskCompletionCancelsRemaining() {
+    // completing a task that has an outgoing sequence flow (taskA -> taskB) with a variable
+    // that satisfies the completion condition must complete the subprocess immediately:
+    // taskB is never created and the still-active taskC is canceled
+    ProcessInstance processInstance = runtimeService.startProcessInstanceByKey(
+        "adHocSubProcessCompletionConditionWithIoMappedTasks");
+
+    Task taskA = taskService.createTaskQuery()
+        .processInstanceId(processInstance.getId())
+        .taskDefinitionKey("taskA")
+        .singleResult();
+    assertNotNull(taskA);
+
+    taskService.complete(taskA.getId(), java.util.Collections.<String, Object>singletonMap("approved", true));
+
+    assertEquals(0, runtimeService.createProcessInstanceQuery().processInstanceId(processInstance.getId()).count());
+  }
+
+  @Deployment
+  @Test
+  public void testExploreMiInputMappedCompletionCondition() {
+    // process-level 'approved' is input-mapped onto each parallel MI instance of the ad hoc
+    // subprocess, so each instance has its own copy: approving inside one instance completes
+    // only that instance (canceling its remaining tasks) and leaves the sibling untouched
+    ProcessInstance processInstance = runtimeService.startProcessInstanceByKey("exploreMiInputMappedCompletion");
+
+    List<Task> taskAs = taskService.createTaskQuery()
+        .processInstanceId(processInstance.getId())
+        .taskDefinitionKey("taskA")
+        .list();
+    assertEquals(2, taskAs.size());
+
+    // mid-chain completion: taskA flows to taskB, but approval completes the instance eagerly
+    taskService.complete(taskAs.get(0).getId(), java.util.Collections.<String, Object>singletonMap("approved", true));
+
+    List<Task> remaining = taskService.createTaskQuery().processInstanceId(processInstance.getId()).list();
+    // first instance fully gone (its taskC canceled, taskB never created);
+    // second instance untouched with its taskA and taskC
+    assertEquals(2, remaining.size());
+    assertEquals(1, remaining.stream().filter(t -> "taskA".equals(t.getTaskDefinitionKey())).count());
+    assertEquals(1, remaining.stream().filter(t -> "taskC".equals(t.getTaskDefinitionKey())).count());
+
+    // approving the second instance completes the whole process
+    Task secondTaskA = taskService.createTaskQuery()
+        .processInstanceId(processInstance.getId())
+        .taskDefinitionKey("taskA")
+        .singleResult();
+    taskService.complete(secondTaskA.getId(), java.util.Collections.<String, Object>singletonMap("approved", true));
+
+    assertEquals(0, runtimeService.createProcessInstanceQuery().processInstanceId(processInstance.getId()).count());
+  }
 }
 
 
