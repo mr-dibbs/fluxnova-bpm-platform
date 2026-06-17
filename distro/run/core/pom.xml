@@ -40,6 +40,11 @@
     </dependency>
 
     <dependency>
+      <groupId>org.finos.fluxnova.connect</groupId>
+      <artifactId>fluxnova-connect-http-client</artifactId>
+    </dependency>
+
+    <dependency>
       <groupId>org.finos.fluxnova.spin</groupId>
       <artifactId>fluxnova-spin-dataformat-all</artifactId>
     </dependency>
